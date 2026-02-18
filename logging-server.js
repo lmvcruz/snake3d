@@ -1,17 +1,18 @@
 /**
  * Simple Node.js logging server for Snake3D frontend
- * 
+ *
  * Receives log entries from the frontend and appends them to a log file.
- * Run this server with: node logging-server.js
+ * Run this server with: npm run logging-server
  */
 
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 // Configuration
 const PORT = 3001;
-const LOG_DIR = path.join(require('os').homedir(), '.snake3d');
+const LOG_DIR = path.join(os.homedir(), '.snake3d');
 const LOG_FILE = path.join(LOG_DIR, 'frontend.log');
 
 // Ensure log directory exists
@@ -44,10 +45,10 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       try {
         const logEntries = JSON.parse(body);
-        
+
         // Format and append log entries to file
         const formattedLogs = logEntries
-          .map(entry => `[${entry.timestamp}] ${entry.level}: ${entry.message}` + 
+          .map(entry => `[${entry.timestamp}] ${entry.level}: ${entry.message}` +
                        (entry.context ? ` ${JSON.stringify(entry.context)}` : ''))
           .join('\n') + '\n';
 
