@@ -63,8 +63,7 @@ function createPerlinNoiseNormalMap(): THREE.CanvasTexture {
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      // Sample height at current position and neighbors
-      const height = fbm(x * scale, y * scale, 5)
+      // Sample height at neighbors for gradient calculation
       const heightL = fbm((x - 1) * scale, y * scale, 5) // Left
       const heightR = fbm((x + 1) * scale, y * scale, 5) // Right
       const heightD = fbm(x * scale, (y - 1) * scale, 5) // Down

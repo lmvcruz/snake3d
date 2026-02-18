@@ -436,7 +436,7 @@ function Game({ mode, onBackToMenu }: GameProps) {
       const wireframeEnabled = wireframeEnabledRef.current
 
       // Toggle for scene meshes (walls, floor, decorations, target)
-      sceneMeshesRef.current.forEach((mesh, index) => {
+      sceneMeshesRef.current.forEach((mesh) => {
         const material = mesh.material as THREE.Material
         if ('wireframe' in material) {
           const stdMat = material as THREE.MeshStandardMaterial

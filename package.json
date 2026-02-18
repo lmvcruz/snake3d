@@ -11,7 +11,9 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "logging-server": "node logging-server.js"
+    "logging-server": "node logging-server.js",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "lil-gui": "^0.21.0",
@@ -33,6 +35,7 @@
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "gh-pages": "^6.3.0",
     "jsdom": "^28.1.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
