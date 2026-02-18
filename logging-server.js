@@ -11,7 +11,7 @@ import path from 'path';
 import os from 'os';
 
 // Configuration
-const PORT = 3001;
+const PORT = 5000;
 const LOG_DIR = path.join(os.homedir(), '.snake3d');
 const LOG_FILE = path.join(LOG_DIR, 'frontend.log');
 

@@ -39,11 +39,11 @@ Since browser applications cannot directly write to the file system, we provide 
 ### Step 1: Start the Logging Server
 
 ```bash
-node logging-server.js
+npm run logging-server
 ```
 
 This will:
-- Start an HTTP server on `http://localhost:3001`
+- Start an HTTP server on `http://localhost:5000`
 - Create the log directory at `C:\Users\l-cruz\.snake3d\`
 - Write logs to `C:\Users\l-cruz\.snake3d\frontend.log`
 
@@ -55,7 +55,7 @@ In your game initialization code:
 import { logger } from './utils/logger'
 
 // Enable logging to the backend server
-logger.setApiEndpoint('http://localhost:3001/logs')
+logger.setApiEndpoint('http://localhost:5000/logs')
 ```
 
 Now all logs will automatically be sent to the backend and written to the file.
