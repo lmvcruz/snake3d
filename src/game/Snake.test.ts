@@ -43,15 +43,75 @@ describe('Snake', () => {
       expect(snake.getDirection()).toBe(Direction.WEST)
     })
 
-    it('should not allow reversing direction (180 degree turn)', () => {
+    it('should allow 180-degree turn (collision will be detected on step)', () => {
       snake.setDirection(Direction.NORTH)
-      snake.grow() // Need at least 2 segments to prevent reversal
-      snake.setDirection(Direction.SOUTH) // Opposite of NORTH
-      expect(snake.getDirection()).toBe(Direction.NORTH) // Should stay NORTH
+      snake.grow() // Create multi-segment snake
+      snake.setDirection(Direction.SOUTH) // Opposite of NORTH - now allowed
+      expect(snake.getDirection()).toBe(Direction.SOUTH) // Direction changed
     })
 
-    it('should allow 180 turn if snake has only one segment', () => {
+    it('should allow dangerous direction changes (collision detected after step)', () => {
+      // Create a snake with length 3 in a line: [(2,0,0), (1,0,0), (0,0,0)] moving EAST
+      snake.setDirection(Direction.EAST)
+      snake.step(true) // [(1,0,0), (0,0,0)]
+      snake.step(true) // [(2,0,0), (1,0,0), (0,0,0)]
+
+      expect(snake.getLength()).toBe(3)
+      expect(snake.getSegments()).toEqual([
+        { x: 2, y: 0, z: 0 },
+        { x: 1, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 }
+      ])
+
+      // Turn SOUTH
+      snake.setDirection(Direction.SOUTH)
+      expect(snake.getDirection()).toBe(Direction.SOUTH)
+
+      // Turn WEST - this is allowed, even though it will cause collision
+      snake.setDirection(Direction.WEST)
+      expect(snake.getDirection()).toBe(Direction.WEST) // Direction changed
+
+      // After stepping, collision is detected
+      snake.step() // Head moves to (1,0,0) - collision!
+      expect(snake.checkSelfCollision()).toBe(true)
+    })
+
+    it('should allow rapid key sequence and detect collision (UP→DOWN→LEFT→RIGHT)', () => {
+      // Create snake moving NORTH with length 3: [(0,0,-2), (0,0,-1), (0,0,0)]
       snake.setDirection(Direction.NORTH)
+      snake.step(true) // [(0,0,-1), (0,0,0)]
+      snake.step(true) // [(0,0,-2), (0,0,-1), (0,0,0)]
+
+      expect(snake.getLength()).toBe(3)
+
+      // 180-degree turn is now allowed
+      snake.setDirection(Direction.SOUTH)
+      expect(snake.getDirection()).toBe(Direction.SOUTH)
+
+      // Step will cause collision
+      snake.step() // Head moves to (0,0,-1) which is occupied!
+      expect(snake.checkSelfCollision()).toBe(true)
+    })
+
+    it('should allow all direction changes (even with multi-segment snake)', () => {
+      // Create multi-segment snake
+      snake.setDirection(Direction.EAST)
+      snake.step(true)
+      snake.step(true)
+
+      expect(snake.getLength()).toBe(3)
+
+      // All direction changes are allowed
+      snake.setDirection(Direction.SOUTH)
+      expect(snake.getDirection()).toBe(Direction.SOUTH)
+
+      snake.setDirection(Direction.WEST)
+      expect(snake.getDirection()).toBe(Direction.WEST)
+
+      snake.setDirection(Direction.NORTH)
+      expect(snake.getDirection()).toBe(Direction.NORTH)
+
+      // Even 180-degree turn
       snake.setDirection(Direction.SOUTH)
       expect(snake.getDirection()).toBe(Direction.SOUTH)
     })
@@ -179,6 +239,114 @@ describe('Snake', () => {
       expect(snake.getHeadPosition()).toEqual(initialPos)
       expect(snake.getDirection()).toBe(Direction.NORTH)
       expect(snake.getVelocity()).toBe(0)
+    })
+  })
+
+  describe('getNextHeadPosition', () => {
+    it('should return next position without moving snake', () => {
+      snake.setDirection(Direction.EAST)
+      const currentHead = snake.getHeadPosition()
+      const nextHead = snake.getNextHeadPosition()
+
+      // Next position should be one unit to the east
+      expect(nextHead).toEqual({ x: currentHead.x + 1, y: 0, z: 0 })
+
+      // Snake should not have moved
+      expect(snake.getHeadPosition()).toEqual(currentHead)
+    })
+
+    it('should calculate correct next position for all directions', () => {
+      const startPos = snake.getHeadPosition()
+
+      snake.setDirection(Direction.NORTH)
+      expect(snake.getNextHeadPosition()).toEqual({ ...startPos, z: startPos.z - 1 })
+
+      snake.setDirection(Direction.EAST)
+      expect(snake.getNextHeadPosition()).toEqual({ ...startPos, x: startPos.x + 1 })
+
+      snake.setDirection(Direction.SOUTH)
+      expect(snake.getNextHeadPosition()).toEqual({ ...startPos, z: startPos.z + 1 })
+
+      snake.setDirection(Direction.WEST)
+      expect(snake.getNextHeadPosition()).toEqual({ ...startPos, x: startPos.x - 1 })
+    })
+  })
+
+  describe('step with growth', () => {
+    it('should grow immediately when step(true) is called', () => {
+      const initialLength = snake.getLength()
+
+      snake.setDirection(Direction.EAST)
+      snake.step(true) // Step with growth
+
+      // Length should increase by 1
+      expect(snake.getLength()).toBe(initialLength + 1)
+
+      // Head should have moved
+      expect(snake.getHeadPosition()).toEqual({ x: 1, y: 0, z: 0 })
+    })
+
+    it('should not remove tail when step(true) is called', () => {
+      snake.setDirection(Direction.EAST)
+      snake.step() // Normal step to (1, 0, 0)
+      snake.grow() // Grow to length 2: [(1,0,0), (0,0,0)]
+
+      const segments = snake.getSegments()
+      expect(segments).toEqual([
+        { x: 1, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 }
+      ])
+
+      // Now step with growth
+      snake.step(true)
+
+      // Should have 3 segments now
+      const newSegments = snake.getSegments()
+      expect(newSegments.length).toBe(3)
+      expect(newSegments).toEqual([
+        { x: 2, y: 0, z: 0 }, // New head
+        { x: 1, y: 0, z: 0 }, // Old head
+        { x: 0, y: 0, z: 0 }  // Tail kept
+      ])
+    })
+
+    it('should work correctly with normal step after step(true)', () => {
+      snake.setDirection(Direction.EAST)
+      snake.step(true) // Grow to length 2
+
+      expect(snake.getLength()).toBe(2)
+
+      snake.step() // Normal step
+
+      // Length should stay at 2
+      expect(snake.getLength()).toBe(2)
+
+      const segments = snake.getSegments()
+      expect(segments).toEqual([
+        { x: 2, y: 0, z: 0 },
+        { x: 1, y: 0, z: 0 }
+      ])
+    })
+
+    it('should handle multiple consecutive step(true) calls', () => {
+      snake.setDirection(Direction.EAST)
+
+      snake.step(true) // Length 2
+      expect(snake.getLength()).toBe(2)
+
+      snake.step(true) // Length 3
+      expect(snake.getLength()).toBe(3)
+
+      snake.step(true) // Length 4
+      expect(snake.getLength()).toBe(4)
+
+      const segments = snake.getSegments()
+      expect(segments).toEqual([
+        { x: 3, y: 0, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 1, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 }
+      ])
     })
   })
 })

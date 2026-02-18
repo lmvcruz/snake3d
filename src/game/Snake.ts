@@ -50,33 +50,10 @@ export class Snake {
 
   /**
    * Set the snake's direction
-   * Prevents 180-degree turns if snake has more than one segment
    */
   setDirection(newDirection: Direction) {
-    // Prevent reversing direction if snake has multiple segments
-    if (this.segments.length > 1 && this.isOppositeDirection(newDirection)) {
-      logger.warn('Cannot reverse direction', {
-        current: this.direction,
-        attempted: newDirection
-      })
-      return
-    }
-
     this.direction = newDirection
     logger.debug('Direction changed', { direction: newDirection })
-  }
-
-  /**
-   * Check if a direction is opposite to current direction
-   */
-  private isOppositeDirection(newDirection: Direction): boolean {
-    const opposites: Record<Direction, Direction> = {
-      [Direction.NORTH]: Direction.SOUTH,
-      [Direction.SOUTH]: Direction.NORTH,
-      [Direction.EAST]: Direction.WEST,
-      [Direction.WEST]: Direction.EAST,
-    }
-    return opposites[this.direction] === newDirection
   }
 
   /**
@@ -102,26 +79,43 @@ export class Snake {
   }
 
   /**
-   * Move the snake one step in the current direction
+   * Get the next head position without moving the snake
    */
-  step() {
+  getNextHeadPosition(): Position {
+    const head = this.segments[0]
+    return this.getNextPosition(head, this.direction)
+  }
+
+  /**
+   * Move the snake one step in the current direction
+   * @param shouldGrow - If true, the snake grows (doesn't remove tail)
+   */
+  step(shouldGrow: boolean = false) {
     const head = this.segments[0]
     const newHead = this.getNextPosition(head, this.direction)
 
     // Add new head
     this.segments.unshift(newHead)
 
-    // Store tail position before removing it
-    this.previousTailPosition = { ...this.segments[this.segments.length - 1] }
+    if (shouldGrow) {
+      // Growing: keep the tail
+      logger.info('Snake grew while moving', {
+        head: newHead,
+        direction: this.direction,
+        length: this.segments.length
+      })
+    } else {
+      // Normal movement: remove tail
+      // Store tail position before removing it (for legacy grow() method)
+      this.previousTailPosition = { ...this.segments[this.segments.length - 1] }
+      this.segments.pop()
 
-    // Remove tail
-    this.segments.pop()
-
-    logger.debug('Snake moved', {
-      head: newHead,
-      direction: this.direction,
-      length: this.segments.length
-    })
+      logger.debug('Snake moved', {
+        head: newHead,
+        direction: this.direction,
+        length: this.segments.length
+      })
+    }
   }
 
   /**
