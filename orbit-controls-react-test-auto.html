@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrbitControls + React Automated Integration Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            min-height: 100vh;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 450px;
+            height: 100vh;
+        }
+        .test-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        .test-section {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .test-section h3 {
+            margin-bottom: 8px;
+            color: #4ade80;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .test-section h3 .status-icon {
+            font-size: 16px;
+        }
+        .canvas-container {
+            width: 100%;
+            height: 180px;
+            background: #000;
+            border-radius: 4px;
+            position: relative;
+        }
+        .canvas-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .status-panel {
+            background: #0f0f23;
+            padding: 15px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+        }
+        .log-entry {
+            padding: 3px 6px;
+            margin: 1px 0;
+            border-radius: 3px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .log-entry.success { background: #166534; color: #4ade80; }
+        .log-entry.error { background: #7f1d1d; color: #fca5a5; }
+        .log-entry.info { background: #1e3a5f; color: #93c5fd; }
+        .log-entry.warn { background: #713f12; color: #fcd34d; }
+        .log-entry.event { background: #4c1d95; color: #c4b5fd; }
+        .log-entry.test { background: #065f46; color: #6ee7b7; font-weight: bold; }
+        .test-info {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 5px;
+        }
+        .test-result {
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .test-result.pass { background: #166534; color: #4ade80; }
+        .test-result.fail { background: #7f1d1d; color: #fca5a5; }
+        .test-result.pending { background: #1e3a5f; color: #93c5fd; }
+        .test-result.running { background: #713f12; color: #fcd34d; }
+        .summary-box {
+            background: #0f172a;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        .summary-box h2 {
+            color: #3b82f6;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 12px;
+        }
+        .summary-row.total {
+            border-top: 1px solid #334155;
+            margin-top: 8px;
+            padding-top: 8px;
+            font-weight: bold;
+        }
+        .pass-count { color: #4ade80; }
+        .fail-count { color: #fca5a5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="test-area" id="test-area">
+            <!-- React will render here -->
+        </div>
+        <div class="status-panel" id="status-panel">
+            <div style="color: #3b82f6; margin-bottom: 10px; font-weight: bold; font-size: 13px;">
+                === AUTOMATED OrbitControls + React Test ===
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        window.THREE = THREE;
+        window.OrbitControls = OrbitControls;
+        window.threeLoaded = true;
+    </script>
+
+    <script type="text/babel" data-type="module">
+        const { useState, useEffect, useLayoutEffect, useRef, useCallback, StrictMode } = React;
+
+        // ==================== LOGGING SYSTEM ====================
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString().substr(11, 12);
+            const panel = document.getElementById('status-panel');
+            const div = document.createElement('div');
+            div.className = `log-entry ${type}`;
+            div.textContent = `[${timestamp}] ${message}`;
+            panel.appendChild(div);
+            panel.scrollTop = panel.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // ==================== TEST STATE ====================
+        const testState = {
+            mountCount: 0,
+            unmountCount: 0,
+            controlsCreated: 0,
+            controlsDisposed: 0,
+            changeEventsFired: 0,
+            startEventsFired: 0,
+            endEventsFired: 0,
+        };
+
+        // ==================== SIMULATION HELPERS ====================
+        function simulateMouseDrag(canvas, startX, startY, endX, endY) {
+            const rect = canvas.getBoundingClientRect();
+            const clientStartX = rect.left + startX;
+            const clientStartY = rect.top + startY;
+            const clientEndX = rect.left + endX;
+            const clientEndY = rect.top + endY;
+
+            // Pointer down on canvas
+            canvas.dispatchEvent(new PointerEvent('pointerdown', {
+                bubbles: true, cancelable: true,
+                clientX: clientStartX, clientY: clientStartY,
+                button: 0, buttons: 1, pointerType: 'mouse', isPrimary: true,
+            }));
+
+            // Pointer moves on document (OrbitControls listens on document during drag)
+            for (let i = 1; i <= 10; i++) {
+                const progress = i / 10;
+                document.dispatchEvent(new PointerEvent('pointermove', {
+                    bubbles: true, cancelable: true,
+                    clientX: clientStartX + (clientEndX - clientStartX) * progress,
+                    clientY: clientStartY + (clientEndY - clientStartY) * progress,
+                    button: 0, buttons: 1, pointerType: 'mouse', isPrimary: true,
+                }));
+            }
+
+            // Pointer up on document
+            document.dispatchEvent(new PointerEvent('pointerup', {
+                bubbles: true, cancelable: true,
+                clientX: clientEndX, clientY: clientEndY,
+                button: 0, buttons: 0, pointerType: 'mouse', isPrimary: true,
+            }));
+        }
+
+        function simulateWheel(canvas, deltaY) {
+            const rect = canvas.getBoundingClientRect();
+            canvas.dispatchEvent(new WheelEvent('wheel', {
+                bubbles: true, cancelable: true,
+                clientX: rect.left + rect.width / 2,
+                clientY: rect.top + rect.height / 2,
+                deltaY: deltaY, deltaMode: 0,
+            }));
+        }
+
+        // ==================== THREE.JS SCENE COMPONENT ====================
+        function ThreeScene({ testId, useLayoutEffectHook, onReady }) {
+            const containerRef = useRef(null);
+            const controlsRef = useRef(null);
+            const cleanupRef = useRef(null);
+
+            const initScene = useCallback(() => {
+                if (!containerRef.current || !window.THREE) return;
+
+                // Skip if already initialized
+                if (controlsRef.current) {
+                    log(`[${testId}] Already initialized, skipping`, 'warn');
+                    return;
+                }
+
+                testState.mountCount++;
+                log(`[${testId}] Mounting (#${testState.mountCount})`, 'info');
+
+                const { Scene, PerspectiveCamera, WebGLRenderer, BoxGeometry,
+                        MeshStandardMaterial, Mesh, GridHelper, DirectionalLight, AmbientLight, Color } = THREE;
+
+                // Scene setup
+                const scene = new Scene();
+                scene.background = new Color(0x1a1a2e);
+
+                const width = containerRef.current.clientWidth || 300;
+                const height = containerRef.current.clientHeight || 180;
+
+                const camera = new PerspectiveCamera(60, width / height, 0.1, 1000);
+                camera.position.set(5, 5, 5);
+                camera.lookAt(0, 0, 0);
+
+                const renderer = new WebGLRenderer({ antialias: true });
+                renderer.setSize(width, height);
+                containerRef.current.appendChild(renderer.domElement);
+
+                const canvas = renderer.domElement;
+
+                // OrbitControls
+                const controls = new OrbitControls(camera, canvas);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controlsRef.current = controls;
+                testState.controlsCreated++;
+
+                log(`[${testId}] OrbitControls created (#${testState.controlsCreated})`, 'success');
+
+                // Track OrbitControls events
+                controls.addEventListener('start', () => { testState.startEventsFired++; });
+                controls.addEventListener('change', () => { testState.changeEventsFired++; });
+                controls.addEventListener('end', () => { testState.endEventsFired++; });
+
+                // Scene objects
+                const cube = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({ color: 0x4ade80 }));
+                scene.add(cube);
+                scene.add(new GridHelper(10, 10, 0x444444, 0x222222));
+                const light = new DirectionalLight(0xffffff, 1);
+                light.position.set(5, 5, 5);
+                scene.add(light);
+                scene.add(new AmbientLight(0x404040));
+
+                // Animation loop
+                let animationId;
+                const animate = () => {
+                    animationId = requestAnimationFrame(animate);
+                    controls.update();
+                    renderer.render(scene, camera);
+                };
+                animate();
+
+                // Store cleanup function
+                cleanupRef.current = () => {
+                    testState.unmountCount++;
+                    log(`[${testId}] Unmounting (#${testState.unmountCount})`, 'warn');
+                    cancelAnimationFrame(animationId);
+                    if (controlsRef.current) {
+                        controlsRef.current.dispose();
+                        controlsRef.current = null;
+                        testState.controlsDisposed++;
+                    }
+                    renderer.dispose();
+                    if (canvas.parentElement) canvas.parentElement.removeChild(canvas);
+                };
+
+                // Notify ready after a short delay
+                setTimeout(() => {
+                    if (onReady) onReady({ canvas, camera, controls });
+                }, 150);
+
+            }, [testId, onReady]);
+
+            const effectHook = useLayoutEffectHook ? useLayoutEffect : useEffect;
+
+            effectHook(() => {
+                // Wait for THREE to load
+                const checkAndInit = () => {
+                    if (window.THREE && window.OrbitControls) {
+                        initScene();
+                    } else {
+                        setTimeout(checkAndInit, 50);
+                    }
+                };
+                checkAndInit();
+
+                return () => {
+                    if (cleanupRef.current) cleanupRef.current();
+                };
+            }, [initScene]);
+
+            return <div ref={containerRef} className="canvas-container" data-testid={testId} />;
+        }
+
+        // ==================== INDIVIDUAL TEST COMPONENT ====================
+        function TestCase({ testId, title, useLayoutEffectHook, useStrictMode, onComplete }) {
+            const [status, setStatus] = useState('pending');
+            const [info, setInfo] = useState('Initializing...');
+            const sceneRefsRef = useRef(null);
+
+            const handleReady = useCallback((refs) => {
+                sceneRefsRef.current = refs;
+                setInfo('Scene ready, running tests...');
+                runTests(refs);
+            }, []);
+
+            const runTests = async (refs) => {
+                setStatus('running');
+                const { canvas, camera, controls } = refs;
+
+                // Test 1: Drag interaction
+                const initialPos = camera.position.clone();
+                const initialStart = testState.startEventsFired;
+                const initialChange = testState.changeEventsFired;
+
+                log(`[${testId}] Running drag test...`, 'test');
+                simulateMouseDrag(canvas, 30, 30, 150, 100);
+
+                await new Promise(r => setTimeout(r, 300));
+
+                const afterDragPos = camera.position.clone();
+                const dragStartEvents = testState.startEventsFired - initialStart;
+                const dragChangeEvents = testState.changeEventsFired - initialChange;
+                const cameraMoved = !initialPos.equals(afterDragPos);
+
+                log(`[${testId}] Drag: startEvents=${dragStartEvents}, changeEvents=${dragChangeEvents}, cameraMoved=${cameraMoved}`, 'info');
+
+                // Test 2: Wheel interaction
+                const beforeWheelDistance = camera.position.length();
+                const beforeWheelChange = testState.changeEventsFired;
+
+                log(`[${testId}] Running wheel test...`, 'test');
+                simulateWheel(canvas, -100);
+
+                await new Promise(r => setTimeout(r, 300));
+
+                const afterWheelDistance = camera.position.length();
+                const wheelChangeEvents = testState.changeEventsFired - beforeWheelChange;
+                const zoomWorked = Math.abs(afterWheelDistance - beforeWheelDistance) > 0.01;
+
+                log(`[${testId}] Wheel: changeEvents=${wheelChangeEvents}, zoomWorked=${zoomWorked}`, 'info');
+
+                // Determine overall result
+                const dragPassed = dragStartEvents > 0 || dragChangeEvents > 0 || cameraMoved;
+                const wheelPassed = wheelChangeEvents > 0 || zoomWorked;
+                const passed = dragPassed && wheelPassed;
+
+                if (passed) {
+                    setStatus('pass');
+                    setInfo(`✓ Drag: ${cameraMoved ? 'camera moved' : 'events fired'}, Wheel: ${zoomWorked ? 'zoom worked' : 'events fired'}`);
+                    log(`[${testId}] ✓ PASSED`, 'success');
+                } else {
+                    setStatus('fail');
+                    setInfo(`✗ Drag: ${dragPassed ? 'OK' : 'FAILED'}, Wheel: ${wheelPassed ? 'OK' : 'FAILED'}`);
+                    log(`[${testId}] ✗ FAILED - OrbitControls not responding`, 'error');
+                }
+
+                if (onComplete) onComplete(testId, passed);
+            };
+
+            const SceneWrapper = useStrictMode ? StrictMode : React.Fragment;
+
+            return (
+                <div className="test-section">
+                    <h3>
+                        <span className="status-icon">
+                            {status === 'pass' ? '✅' : status === 'fail' ? '❌' : status === 'running' ? '⏳' : '⏸️'}
+                        </span>
+                        {title}
+                    </h3>
+                    <SceneWrapper>
+                        <ThreeScene
+                            testId={testId}
+                            useLayoutEffectHook={useLayoutEffectHook}
+                            onReady={handleReady}
+                        />
+                    </SceneWrapper>
+                    <div className="test-info">{info}</div>
+                    <div className={`test-result ${status}`}>
+                        {status === 'pass' ? '✓ PASSED' :
+                         status === 'fail' ? '✗ FAILED' :
+                         status === 'running' ? 'Running...' : 'Pending...'}
+                    </div>
+                </div>
+            );
+        }
+
+        // ==================== MAIN APP ====================
+        function App() {
+            const [results, setResults] = useState({});
+            const [allComplete, setAllComplete] = useState(false);
+
+            const handleComplete = useCallback((testId, passed) => {
+                setResults(prev => {
+                    const updated = { ...prev, [testId]: passed };
+                    // Check if all 4 tests complete
+                    if (Object.keys(updated).length === 4) {
+                        setAllComplete(true);
+                        setTimeout(() => printFinalSummary(updated), 500);
+                    }
+                    return updated;
+                });
+            }, []);
+
+            const printFinalSummary = (finalResults) => {
+                const passed = Object.values(finalResults).filter(v => v).length;
+                const failed = Object.values(finalResults).filter(v => !v).length;
+
+                log('', 'info');
+                log('══════════════════════════════════════════', 'test');
+                log('           FINAL TEST SUMMARY', 'test');
+                log('══════════════════════════════════════════', 'test');
+                log(`Total Tests: 4`, 'info');
+                log(`Passed: ${passed}`, passed > 0 ? 'success' : 'info');
+                log(`Failed: ${failed}`, failed > 0 ? 'error' : 'info');
+                log('', 'info');
+                log(`Mount count: ${testState.mountCount}`, 'info');
+                log(`Unmount count: ${testState.unmountCount}`, 'info');
+                log(`Controls created: ${testState.controlsCreated}`, 'info');
+                log(`Controls disposed: ${testState.controlsDisposed}`, 'info');
+                log(`Total start events: ${testState.startEventsFired}`, 'info');
+                log(`Total change events: ${testState.changeEventsFired}`, 'info');
+                log(`Total end events: ${testState.endEventsFired}`, 'info');
+                log('══════════════════════════════════════════', 'test');
+
+                if (failed === 0) {
+                    log('🎉 ALL TESTS PASSED!', 'success');
+                    log('OrbitControls works correctly with React.', 'success');
+                } else {
+                    log('⚠️ SOME TESTS FAILED', 'error');
+                    log('Check which React configurations break OrbitControls.', 'error');
+                }
+            };
+
+            const passedCount = Object.values(results).filter(v => v).length;
+            const failedCount = Object.values(results).filter(v => !v).length;
+
+            return (
+                <div>
+                    <TestCase
+                        testId="test1"
+                        title="Test 1: useEffect (No StrictMode)"
+                        useLayoutEffectHook={false}
+                        useStrictMode={false}
+                        onComplete={handleComplete}
+                    />
+                    <TestCase
+                        testId="test2"
+                        title="Test 2: useLayoutEffect (No StrictMode)"
+                        useLayoutEffectHook={true}
+                        useStrictMode={false}
+                        onComplete={handleComplete}
+                    />
+                    <TestCase
+                        testId="test3"
+                        title="Test 3: useEffect + StrictMode"
+                        useLayoutEffectHook={false}
+                        useStrictMode={true}
+                        onComplete={handleComplete}
+                    />
+                    <TestCase
+                        testId="test4"
+                        title="Test 4: useLayoutEffect + StrictMode"
+                        useLayoutEffectHook={true}
+                        useStrictMode={true}
+                        onComplete={handleComplete}
+                    />
+
+                    {allComplete && (
+                        <div className="summary-box">
+                            <h2>📊 Test Summary</h2>
+                            <div className="summary-row">
+                                <span>Test 1 (useEffect):</span>
+                                <span className={results.test1 ? 'pass-count' : 'fail-count'}>
+                                    {results.test1 ? '✓ PASS' : '✗ FAIL'}
+                                </span>
+                            </div>
+                            <div className="summary-row">
+                                <span>Test 2 (useLayoutEffect):</span>
+                                <span className={results.test2 ? 'pass-count' : 'fail-count'}>
+                                    {results.test2 ? '✓ PASS' : '✗ FAIL'}
+                                </span>
+                            </div>
+                            <div className="summary-row">
+                                <span>Test 3 (useEffect + StrictMode):</span>
+                                <span className={results.test3 ? 'pass-count' : 'fail-count'}>
+                                    {results.test3 ? '✓ PASS' : '✗ FAIL'}
+                                </span>
+                            </div>
+                            <div className="summary-row">
+                                <span>Test 4 (useLayoutEffect + StrictMode):</span>
+                                <span className={results.test4 ? 'pass-count' : 'fail-count'}>
+                                    {results.test4 ? '✓ PASS' : '✗ FAIL'}
+                                </span>
+                            </div>
+                            <div className="summary-row total">
+                                <span>Total:</span>
+                                <span>
+                                    <span className="pass-count">{passedCount} passed</span>
+                                    {failedCount > 0 && <span className="fail-count"> / {failedCount} failed</span>}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Wait for THREE.js to load, then mount React
+        const waitForThree = setInterval(() => {
+            if (window.threeLoaded) {
+                clearInterval(waitForThree);
+                log('Three.js loaded, starting tests...', 'success');
+                const root = ReactDOM.createRoot(document.getElementById('test-area'));
+                root.render(<App />);
+            }
+        }, 100);
+    </script>
+</body>
+</html>

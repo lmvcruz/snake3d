@@ -23,17 +23,19 @@ describe('Logger', () => {
   })
 
   it('should log different levels correctly', () => {
+    testLogger.trace('Trace message')
     testLogger.debug('Debug message')
     testLogger.info('Info message')
     testLogger.warn('Warning message')
     testLogger.error('Error message')
 
     const logs = testLogger.getLogs()
-    expect(logs).toHaveLength(4)
-    expect(logs[0].level).toBe(LogLevel.DEBUG)
-    expect(logs[1].level).toBe(LogLevel.INFO)
-    expect(logs[2].level).toBe(LogLevel.WARN)
-    expect(logs[3].level).toBe(LogLevel.ERROR)
+    expect(logs).toHaveLength(5)
+    expect(logs[0].level).toBe(LogLevel.TRACE)
+    expect(logs[1].level).toBe(LogLevel.DEBUG)
+    expect(logs[2].level).toBe(LogLevel.INFO)
+    expect(logs[3].level).toBe(LogLevel.WARN)
+    expect(logs[4].level).toBe(LogLevel.ERROR)
   })
 
   it('should maintain max logs in memory', () => {

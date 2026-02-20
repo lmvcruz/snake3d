@@ -1,58 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-
-// Mock Three.js to avoid WebGL context issues in tests
-vi.mock('three', () => {
-  const noop = () => {}
-
-  class MockWebGLRenderer {
-    domElement = document.createElement('canvas')
-    setSize = noop
-    setPixelRatio = noop
-    render = noop
-    dispose = noop
-  }
-
-  class MockClock {
-    start = noop
-    getElapsedTime = () => 0
-  }
-
-  class MockPerspectiveCamera {
-    position = { set: noop, x: 0, y: 0, z: 0 }
-    lookAt = noop
-  }
-
-  class MockScene {
-    add = noop
-    remove = noop
-    children = []
-  }
-
-  class MockSphereGeometry {}
-  class MockMeshStandardMaterial {}
-  class MockMesh {
-    position = { set: noop, x: 0, y: 0, z: 0 }
-  }
-  class MockAmbientLight {}
-  class MockDirectionalLight {
-    position = { set: noop, x: 0, y: 0, z: 0 }
-  }
-
-  return {
-    WebGLRenderer: MockWebGLRenderer,
-    Clock: MockClock,
-    PerspectiveCamera: MockPerspectiveCamera,
-    Scene: MockScene,
-    SphereGeometry: MockSphereGeometry,
-    MeshStandardMaterial: MockMeshStandardMaterial,
-    Mesh: MockMesh,
-    AmbientLight: MockAmbientLight,
-    DirectionalLight: MockDirectionalLight,
-  }
-})
-
 import { render, screen } from '@testing-library/react'
 import Game from './Game'
+
 
 describe('Game Component', () => {
   const mockOnBackToMenu = vi.fn()
@@ -211,13 +160,21 @@ describe('Game Component', () => {
       const eventS = new KeyboardEvent('keydown', { key: 'S' })
       const eventD = new KeyboardEvent('keydown', { key: 'D' })
 
+      const preventDefaultSpyW = vi.spyOn(eventW, 'preventDefault')
+      const preventDefaultSpyA = vi.spyOn(eventA, 'preventDefault')
+      const preventDefaultSpyS = vi.spyOn(eventS, 'preventDefault')
+      const preventDefaultSpyD = vi.spyOn(eventD, 'preventDefault')
+
       window.dispatchEvent(eventW)
       window.dispatchEvent(eventA)
       window.dispatchEvent(eventS)
       window.dispatchEvent(eventD)
 
       // All should be handled (events were prevented)
-      expect(vi.spyOn(eventW, 'preventDefault')).toHaveBeenCalled()
+      expect(preventDefaultSpyW).toHaveBeenCalled()
+      expect(preventDefaultSpyA).toHaveBeenCalled()
+      expect(preventDefaultSpyS).toHaveBeenCalled()
+      expect(preventDefaultSpyD).toHaveBeenCalled()
     })
 
     it('should ignore non-control keys', () => {

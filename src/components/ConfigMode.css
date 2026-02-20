@@ -1,0 +1,109 @@
+.config-mode {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  background: #0f0f1e;
+}
+
+/* Override ControlPanel fixed positioning for ConfigMode */
+.config-mode .control-panel {
+  position: relative;
+  right: auto;
+  flex-shrink: 0;
+}
+
+.canvas-container {
+  flex: 1;
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.canvas-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.canvas-section h3 {
+  margin: 0 0 0.5rem 0;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.canvas-wrapper {
+  flex: 1;
+  position: relative;
+  background: #000;
+  border-radius: 4px;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.canvas-wrapper canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+.canvas-wrapper canvas:active {
+  cursor: grabbing;
+}
+
+.canvas-label {
+  margin: 0.5rem 0 0 0;
+  color: #888;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.overview-section {
+  border: 2px solid rgba(135, 206, 235, 0.3);
+}
+
+.render-section {
+  border: 2px solid rgba(255, 165, 0, 0.3);
+}
+
+.back-button {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  z-index: 1000;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.back-button:active {
+  transform: translateY(0);
+}
+
+/* Responsive layout for smaller screens */
+@media (max-width: 1200px) {
+  .canvas-container {
+    flex-direction: column;
+  }
+}

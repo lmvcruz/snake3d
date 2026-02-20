@@ -129,7 +129,7 @@ function createCheckerboardTexture(): THREE.CanvasTexture {
 /**
  * Creates the infinite floor mesh that extends beyond the arena
  */
-export function createInfiniteFloor(): THREE.Mesh {
+export function createInfiniteFloor(): { mesh: THREE.Mesh; material: THREE.MeshStandardMaterial } {
   const geometry = new THREE.PlaneGeometry(200, 80, 100, 50) // Many subdivisions for visible wireframe
   const normalMap = createPerlinNoiseNormalMap()
 
@@ -148,13 +148,13 @@ export function createInfiniteFloor(): THREE.Mesh {
   mesh.position.y = -0.1 // Slightly below arena floor
   mesh.name = 'infiniteFloor' // For debugging
 
-  return mesh
+  return { mesh, material }
 }
 
 /**
  * Creates the arena floor mesh with checkerboard pattern
  */
-export function createArenaFloor(): THREE.Mesh {
+export function createArenaFloor(): { mesh: THREE.Mesh; material: THREE.MeshStandardMaterial } {
   const geometry = new THREE.PlaneGeometry(20, 20)
   const material = new THREE.MeshStandardMaterial({
     map: createCheckerboardTexture(),
@@ -166,5 +166,5 @@ export function createArenaFloor(): THREE.Mesh {
   mesh.position.y = 0
   mesh.name = 'arenaFloor'
 
-  return mesh
+  return { mesh, material }
 }

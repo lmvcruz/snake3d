@@ -9,6 +9,7 @@
  */
 
 export enum LogLevel {
+  TRACE = 'TRACE',
   DEBUG = 'DEBUG',
   INFO = 'INFO',
   WARN = 'WARN',
@@ -72,6 +73,10 @@ class Logger {
         console.error('Failed to send log to API:', err)
       })
     }
+  }
+
+  trace(message: string, context?: Record<string, unknown>) {
+    this.log(LogLevel.TRACE, message, context)
   }
 
   debug(message: string, context?: Record<string, unknown>) {

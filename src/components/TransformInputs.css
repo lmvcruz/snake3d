@@ -1,0 +1,90 @@
+.transform-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.transform-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.transform-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #e0e0e0;
+  margin-bottom: 0.25rem;
+}
+
+.transform-xyz {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.transform-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.axis-label {
+  font-size: 0.75rem;
+  color: #999;
+  display: none; /* Hidden visually, but accessible for screen readers */
+}
+
+.transform-input {
+  width: 100%;
+  padding: 0.4rem;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.85rem;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+}
+
+.transform-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  background: #333;
+}
+
+.transform-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Remove spinner from number inputs */
+.transform-input::-webkit-outer-spin-button,
+.transform-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.transform-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.transform-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.transform-checkbox-wrapper input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #4CAF50;
+}
+
+.transform-checkbox-wrapper label {
+  cursor: pointer;
+  user-select: none;
+}

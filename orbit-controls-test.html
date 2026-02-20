@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrbitControls Diagnostic Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: monospace;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 5px;
+            max-width: 400px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        #canvas-container {
+            width: 800px;
+            height: 600px;
+            margin: 20px auto;
+            background: #000;
+            border: 2px solid #4a4a6a;
+        }
+        .status {
+            margin: 5px 0;
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .warn { color: #fbbf24; }
+        h2 {
+            margin-top: 0;
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2>OrbitControls Diagnostic Test</h2>
+        <div id="status"></div>
+    </div>
+    <div id="canvas-container"></div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const statusDiv = document.getElementById('status');
+
+        function log(message, type = 'info') {
+            const line = document.createElement('div');
+            line.className = `status ${type}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            statusDiv.appendChild(line);
+            console.log(`[${type}]`, message);
+        }
+
+        try {
+            log('Starting diagnostic test...', 'info');
+
+            // Create scene
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x222244); // Lighter background to see if rendering works
+            log('✓ Scene created', 'success');
+
+            // Create camera
+            const camera = new THREE.PerspectiveCamera(
+                60,
+                800 / 600,
+                0.1,
+                1000
+            );
+            camera.position.set(15, 20, 15);
+            camera.lookAt(0, 0, 0);
+            log(`✓ Camera created at (${camera.position.x}, ${camera.position.y}, ${camera.position.z})`, 'success');
+
+            // Create renderer
+            const container = document.getElementById('canvas-container');
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(800, 600);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+            log('✓ Renderer created and canvas appended', 'success');
+
+            const canvas = renderer.domElement;
+            log(`✓ Canvas dimensions: ${canvas.width}x${canvas.height}`, 'info');
+
+            // Add some objects to see
+            const geometry = new THREE.BoxGeometry(5, 5, 5);
+            const material = new THREE.MeshStandardMaterial({
+                color: 0xff6600,
+                roughness: 0.5,
+                metalness: 0.2
+            });
+            const cube = new THREE.Mesh(geometry, material);
+            cube.position.set(0, 2.5, 0);
+            scene.add(cube);
+
+            // Add a bright sphere for visibility
+            const sphereGeometry = new THREE.SphereGeometry(3, 32, 32);
+            const sphereMaterial = new THREE.MeshStandardMaterial({
+                color: 0x60a5fa,
+                emissive: 0x1a3a5f,
+                emissiveIntensity: 0.5
+            });
+            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            sphere.position.set(8, 3, 0);
+            scene.add(sphere);
+
+            const gridHelper = new THREE.GridHelper(50, 10, 0x444444, 0x222222);
+            scene.add(gridHelper);
+
+            const axesHelper = new THREE.AxesHelper(10);
+            scene.add(axesHelper);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            directionalLight.position.set(10, 20, 10);
+            scene.add(directionalLight);
+
+            log('✓ Scene objects added (cube, sphere, grid, axes, lights)', 'success');
+
+            // Create OrbitControls
+            log('Creating OrbitControls...', 'warn');
+            const controls = new OrbitControls(camera, canvas);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            log('✓ OrbitControls created', 'success');
+            log(`  - enabled: ${controls.enabled}`, 'info');
+            log(`  - enablePan: ${controls.enablePan}`, 'info');
+            log(`  - enableZoom: ${controls.enableZoom}`, 'info');
+            log(`  - enableRotate: ${controls.enableRotate}`, 'info');
+
+            // Check if OrbitControls has methods
+            log(`  - update method exists: ${typeof controls.update === 'function'}`, 'info');
+            log(`  - dispose method exists: ${typeof controls.dispose === 'function'}`, 'info');
+
+            // Add event listeners to controls
+            let controlEventCount = 0;
+            controls.addEventListener('change', () => {
+                controlEventCount++;
+                if (controlEventCount <= 5) {
+                    log(`✓ OrbitControls 'change' event fired! (count: ${controlEventCount})`, 'success');
+                }
+            });
+
+            controls.addEventListener('start', () => {
+                log('✓ OrbitControls \'start\' event fired!', 'success');
+            });
+
+            controls.addEventListener('end', () => {
+                log('✓ OrbitControls \'end\' event fired!', 'success');
+            });
+
+            // Add canvas event listeners to verify events reach canvas
+            let canvasEventCount = 0;
+            canvas.addEventListener('pointerdown', (e) => {
+                log(`✓ Canvas received pointerdown at (${e.clientX}, ${e.clientY})`, 'success');
+            });
+
+            canvas.addEventListener('pointermove', (e) => {
+                if (e.buttons !== 0) {
+                    canvasEventCount++;
+                    if (canvasEventCount <= 3) {
+                        log(`✓ Canvas received pointermove with button pressed`, 'success');
+                    }
+                }
+            });
+
+            canvas.addEventListener('wheel', (e) => {
+                log(`✓ Canvas received wheel event (deltaY: ${e.deltaY})`, 'success');
+            });
+
+            log('✓ Event listeners attached', 'success');
+
+            // Animation loop
+            let frameCount = 0;
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Rotate cube to show animation is working
+                cube.rotation.x += 0.01;
+                cube.rotation.y += 0.01;
+
+                controls.update();
+
+                // Log camera position occasionally
+                if (frameCount % 60 === 0) {
+                    const pos = camera.position;
+                    log(`Camera: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}) | Frame: ${frameCount}`, 'info');
+                }
+
+                frameCount++;
+                renderer.render(scene, camera);
+            }
+
+            animate();
+            log('✓ Animation loop started', 'success');
+            log('═══════════════════════════════════', 'info');
+            log('TEST READY: Cube should be rotating', 'warn');
+            log('Try: Left-drag (rotate), Right-drag (pan), Wheel (zoom)', 'warn');
+            log('Watch for OrbitControls events in the log', 'warn');
+        } catch (error) {
+            log(`✗ Error: ${error.message}`, 'error');
+            console.error('Diagnostic test error:', error);
+        }
+    </script>
+</body>
+</html>
